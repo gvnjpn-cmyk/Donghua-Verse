@@ -1,0 +1,8 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "env": {
+    "ORBITCLOUD_API_KEY": "@orbitcloud-api-key"
+  }
+}
