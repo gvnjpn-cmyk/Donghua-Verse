@@ -67,7 +67,6 @@ export interface EpisodeDetail {
   prev_episode?: string | null;
   next_episode?: string | null;
   donghua?: Donghua;
-  [key: string]: unknown;
 }
 
 export interface VideoServer {
@@ -76,16 +75,18 @@ export interface VideoServer {
   quality?: string;
 }
 
-export interface HomeData {
+// Pakai Record biar gak conflict dengan index signature di TS strict
+export type HomeData = Record<string, unknown> & {
   populer?: Donghua[];
   terbaru?: Donghua[];
   tamat?: Donghua[];
   slider?: Donghua[];
   ongoing?: Donghua[];
   completed?: Donghua[];
+  popular?: Donghua[];
+  latest?: Donghua[];
   data?: Donghua[];
-  [key: string]: unknown;
-}
+};
 
 export interface ScheduleItem {
   id?: string | number;
@@ -102,14 +103,16 @@ export interface ScheduleItem {
   status?: string;
 }
 
-export interface Schedule {
+export type ScheduleDay = Record<string, unknown> & {
   day?: string;
   hari?: string;
   donghua?: ScheduleItem[];
   data?: ScheduleItem[];
   list?: ScheduleItem[];
-  [key: string]: unknown;
-}
+};
+
+// Alias lama
+export type Schedule = ScheduleDay;
 
 export interface Comment {
   id: string;
