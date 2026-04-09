@@ -1,14 +1,12 @@
-import type { Donghua, Episode, EpisodeDetail, Schedule, HomeData } from './types';
+import type { Donghua, Episode, EpisodeDetail, ScheduleDay, HomeData } from './types';
 
 const API_BASE = 'https://api.app.orbitcloud.web.id/api/v1';
 
-// ─── Helper ────────────────────────────────────────────────
 function getHeaders(): HeadersInit {
-  const key = process.env.ORBITCLOUD_API_KEY || process.env.NEXT_PUBLIC_ORBITCLOUD_API_KEY || '';
-  return {
-    'Content-Type': 'application/json',
-    ...(key ? { 'x-api-key': key } : {}),
-  };
+  const key = process.env.ORBITCLOUD_API_KEY ?? '';
+  const h: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (key) h['x-api-key'] = key;
+  return h;
 }
 
 async function get<T>(path: string, revalidate = 300): Promise<T> {
@@ -16,8 +14,8 @@ async function get<T>(path: string, revalidate = 300): Promise<T> {
     headers: getHeaders(),
     next: { revalidate },
   });
-  if (!res.ok) throw new Error(`OrbitCloud API ${res.status}: ${path}`);
-  return res.json();
+  if (!res.ok) throw new Error(`OrbitCloud ${res.status}: ${path}`);
+  return res.json() as Promise<T>;
 }
 
 async function post<T>(path: string, body: Record<string, unknown>): Promise<T> {
@@ -27,72 +25,43 @@ async function post<T>(path: string, body: Record<string, unknown>): Promise<T> 
     body: JSON.stringify(body),
     cache: 'no-store',
   });
-  if (!res.ok) throw new Error(`OrbitCloud API ${res.status}: POST ${path}`);
-  return res.json();
+  if (!res.ok) throw new Error(`OrbitCloud POST ${res.status}: ${path}`);
+  return res.json() as Promise<T>;
 }
 
-// ─── Normalize helpers ──────────────────────────────────────
+/* ── Normalize helpers ── */
 export function getCover(d: Donghua): string {
-  return d.cover || d.thumbnail || d.poster || d.image || '/placeholder.jpg';
+  return d.cover ?? d.thumbnail ?? d.poster ?? d.image ?? d.gambar ?? '/placeholder.jpg';
 }
-
 export function getSlug(d: Donghua): string {
-  return String(d.slug ?? d.id);
+  return String(d.slug ?? d.id ?? '');
 }
 
-// ─── Endpoints ─────────────────────────────────────────────
-/**
- * GET /api/v1/home?pages=N
- * Returns: { populer, terbaru, tamat } atau similar
- */
+/* ── Endpoints ── */
 export async function getHome(pages = 1): Promise<HomeData> {
   return get<HomeData>(`/home?pages=${pages}`, 180);
 }
 
-/**
- * POST /api/v1/home — realtime scrape
- */
-export async function getHomeRealtime(halaman = 1): Promise<HomeData> {
-  return post<HomeData>('/home', { halaman });
-}
-
-/**
- * GET /api/v1/search?q=...&pages=N
- */
 export async function searchDonghua(q: string, pages = 1): Promise<Donghua[]> {
-  const res = await get<Donghua[] | { data: Donghua[] }>(`/search?q=${encodeURIComponent(q)}&pages=${pages}`, 60);
-  return Array.isArray(res) ? res : res.data ?? [];
+  type Res = Donghua[] | { data: Donghua[] };
+  const res = await get<Res>(`/search?q=${encodeURIComponent(q)}&pages=${pages}`, 60);
+  return Array.isArray(res) ? res : (res.data ?? []);
 }
 
-/**
- * POST /api/v1/search
- */
-export async function searchDonghuaPost(q: string, halaman = 1): Promise<Donghua[]> {
-  const res = await post<Donghua[] | { data: Donghua[] }>('/search', { q, halaman });
-  return Array.isArray(res) ? res : res.data ?? [];
+export async function getJadwal(): Promise<ScheduleDay[]> {
+  type Res = ScheduleDay[] | { data: ScheduleDay[] };
+  const res = await get<Res>('/jadwal', 3600);
+  return Array.isArray(res) ? res : (res.data ?? []);
 }
 
-/**
- * GET /api/v1/jadwal
- */
-export async function getJadwal(): Promise<Schedule[]> {
-  const res = await get<Schedule[] | { data: Schedule[] }>('/jadwal', 3600);
-  return Array.isArray(res) ? res : res.data ?? [];
-}
-
-/**
- * GET /api/v1/detail/:slug
- */
 export async function getDetail(slug: string): Promise<Donghua> {
-  const res = await get<Donghua | { data: Donghua }>(`/detail/${slug}`, 300);
+  type Res = Donghua | { data: Donghua };
+  const res = await get<Res>(`/detail/${slug}`, 300);
   return (res as { data: Donghua }).data ?? (res as Donghua);
 }
 
-/**
- * GET /api/v1/episode/:slug
- * slug format: {donghua-slug}-episode-{N}  e.g. renegade-immortal-episode-100
- */
 export async function getEpisode(episodeSlug: string): Promise<EpisodeDetail> {
-  const res = await get<EpisodeDetail | { data: EpisodeDetail }>(`/episode/${episodeSlug}`, 120);
+  type Res = EpisodeDetail | { data: EpisodeDetail };
+  const res = await get<Res>(`/episode/${episodeSlug}`, 120);
   return (res as { data: EpisodeDetail }).data ?? (res as EpisodeDetail);
 }
