@@ -11,34 +11,22 @@ interface Props {
 }
 
 export async function generateMetadata({ searchParams }: Props) {
-  return {
-    title: searchParams.q ? `Hasil: ${searchParams.q}` : 'Cari Donghua',
-  };
+  return { title: searchParams.q ? `Hasil: ${searchParams.q}` : 'Cari Donghua' };
 }
 
-async function SearchResults({ q, pages }: { q: string; pages: number }) {
+async function Results({ q, pages }: { q: string; pages: number }) {
   let results: Donghua[] = [];
-  let error = '';
-
   try {
     results = await searchDonghua(q, pages);
-  } catch (err) {
-    error = 'Gagal mencari. Coba lagi.';
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12 text-text-muted">
-        <p>{error}</p>
-      </div>
-    );
+  } catch {
+    return <p className="text-center text-text-muted py-12">Gagal mencari. Coba lagi.</p>;
   }
 
   if (!results.length) {
     return (
       <div className="text-center py-16">
         <Search size={48} className="text-text-faint mx-auto mb-4" />
-        <p className="text-text-muted font-medium">Tidak ada hasil untuk &quot;{q}&quot;</p>
+        <p className="text-text-muted font-medium">Tidak ada hasil untuk &ldquo;{q}&rdquo;</p>
         <p className="text-sm text-text-faint mt-2">Coba kata kunci lain</p>
       </div>
     );
@@ -47,46 +35,40 @@ async function SearchResults({ q, pages }: { q: string; pages: number }) {
   return (
     <div>
       <p className="text-text-muted text-sm mb-5">
-        Ditemukan <span className="text-white font-semibold">{results.length}</span> hasil untuk &quot;{q}&quot;
+        <span className="text-white font-semibold">{results.length}</span> hasil untuk &ldquo;{q}&rdquo;
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {results.map((d, i) => (
-          <DonghuaCard key={getItemSlug(d) || i} donghua={d} variant="wide" />
+          <DonghuaCard key={getItemSlug(d) || String(i)} donghua={d} variant="wide" />
         ))}
       </div>
     </div>
   );
 }
 
-function ResultsSkeleton() {
+function Skeleton() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
       {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="skeleton rounded-xl" style={{ width: '100%', aspectRatio: '3/4' }} />
+        <div key={i} className="skeleton rounded-xl" style={{ aspectRatio: '3/4' }} />
       ))}
     </div>
   );
 }
 
 export default function SearchPage({ searchParams }: Props) {
-  const q = searchParams.q?.trim() || '';
-  const pages = parseInt(searchParams.pages || '1');
+  const q     = searchParams.q?.trim() ?? '';
+  const pages = parseInt(searchParams.pages ?? '1');
 
   return (
     <div className="pt-16 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header & Search box */}
-        <div className="mb-8">
-          <h1 className="font-display text-3xl md:text-4xl text-white tracking-wide mb-4">
-            CARI DONGHUA
-          </h1>
-          <SearchForm initialQuery={q} />
-        </div>
+        <h1 className="font-display text-3xl md:text-4xl text-white tracking-wide mb-4">CARI DONGHUA</h1>
+        <div className="mb-8"><SearchForm initialQuery={q} /></div>
 
-        {/* Results */}
         {q ? (
-          <Suspense fallback={<ResultsSkeleton />}>
-            <SearchResults q={q} pages={pages} />
+          <Suspense fallback={<Skeleton />}>
+            <Results q={q} pages={pages} />
           </Suspense>
         ) : (
           <div className="text-center py-16">
