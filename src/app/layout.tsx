@@ -1,30 +1,25 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import TopBar from '@/components/TopBar';
+import BottomNav from '@/components/BottomNav';
 
 export const metadata: Metadata = {
-  title: {
-    default: 'DonghuaVerse — Nonton Donghua Sub Indo',
-    template: '%s | DonghuaVerse',
-  },
-  description: 'Nonton donghua (anime China) subtitle Indonesia terlengkap. Update terbaru setiap hari.',
-  keywords: ['donghua', 'anime china', 'sub indo', 'nonton online', 'streaming'],
+  title: { default: 'DonghuaVerse', template: '%s · DonghuaVerse' },
+  description: 'Streaming donghua subtitle Indonesia — update harian',
+  themeColor: '#08080f',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id">
       <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
+        <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
-      <body className="noise-overlay">
-        <Navbar />
-        <main className="min-h-screen">{children}</main>
-        <Footer />
+      <body>
+        <TopBar />
+        <main>{children}</main>
+        <BottomNav />
       </body>
     </html>
   );
