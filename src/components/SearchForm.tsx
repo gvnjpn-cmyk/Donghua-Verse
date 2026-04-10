@@ -4,47 +4,33 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 
-interface Props {
-  initialQuery?: string;
-}
-
-export default function SearchForm({ initialQuery = '' }: Props) {
+export default function SearchForm({ initialQuery = '' }: { initialQuery?: string }) {
   const [q, setQ] = useState(initialQuery);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = q.trim();
-    if (!trimmed) return;
-    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+    if (q.trim()) router.push(`/search?q=${encodeURIComponent(q.trim())}`);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-3 max-w-xl">
-      <div className="relative flex-1">
-        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+    <form onSubmit={submit} className="flex items-center gap-2">
+      <div className="flex-1 flex items-center gap-2 px-4 py-3 rounded-2xl"
+        style={{ background:'var(--ink3)', border:'1px solid var(--ink5)' }}>
+        <Search size={16} style={{ color:'var(--muted)' }} className="flex-shrink-0" />
+        <input type="text" value={q} onChange={e => setQ(e.target.value)}
           placeholder="Cari judul donghua..."
-          className="w-full bg-bg-card border border-border focus:border-primary rounded-full px-5 py-3 pl-11 text-text text-sm outline-none transition-colors placeholder-text-faint"
-          autoFocus
-        />
+          className="flex-1 bg-transparent text-sm outline-none placeholder-muted"
+          style={{ color:'var(--text)' }} autoFocus />
         {q && (
-          <button
-            type="button"
-            onClick={() => setQ('')}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors"
-          >
-            <X size={15} />
+          <button type="button" onClick={() => setQ('')}>
+            <X size={14} style={{ color:'var(--muted)' }} />
           </button>
         )}
       </div>
-      <button
-        type="submit"
-        className="px-6 py-3 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-full transition-all shadow-glow-sm hover:shadow-glow-red"
-      >
+      <button type="submit"
+        className="px-5 py-3 rounded-2xl text-sm font-bold transition-all"
+        style={{ background:'var(--cyan)', color:'#000' }}>
         Cari
       </button>
     </form>
