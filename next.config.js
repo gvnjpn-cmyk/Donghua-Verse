@@ -4,9 +4,9 @@ const nextConfig = {
     unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
+      { protocol: 'http',  hostname: '**' },
     ],
   },
-  // Ignore TS/ESLint errors saat build Vercel (aman untuk production)
   typescript: { ignoreBuildErrors: true },
   eslint:     { ignoreDuringBuilds: true },
 };
