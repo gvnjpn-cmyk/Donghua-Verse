@@ -6,77 +6,63 @@ import DonghuaCard from '@/components/DonghuaCard';
 import SearchForm from '@/components/SearchForm';
 import { getItemSlug } from '@/lib/utils';
 
-interface Props {
-  searchParams: { q?: string; pages?: string };
-}
+export const dynamic = 'force-dynamic';
+interface Props { searchParams: { q?: string } }
 
-export async function generateMetadata({ searchParams }: Props) {
-  return { title: searchParams.q ? `Hasil: ${searchParams.q}` : 'Cari Donghua' };
-}
-
-async function Results({ q, pages }: { q: string; pages: number }) {
+async function Results({ q }: { q: string }) {
   let results: Donghua[] = [];
-  try {
-    results = await searchDonghua(q, pages);
-  } catch {
-    return <p className="text-center text-text-muted py-12">Gagal mencari. Coba lagi.</p>;
-  }
+  let err = '';
+  try { results = await searchDonghua(q); }
+  catch (e) { err = e instanceof Error ? e.message : String(e); }
 
-  if (!results.length) {
-    return (
-      <div className="text-center py-16">
-        <Search size={48} className="text-text-faint mx-auto mb-4" />
-        <p className="text-text-muted font-medium">Tidak ada hasil untuk &ldquo;{q}&rdquo;</p>
-        <p className="text-sm text-text-faint mt-2">Coba kata kunci lain</p>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <p className="text-text-muted text-sm mb-5">
-        <span className="text-white font-semibold">{results.length}</span> hasil untuk &ldquo;{q}&rdquo;
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {results.map((d, i) => (
-          <DonghuaCard key={getItemSlug(d) || String(i)} donghua={d} variant="wide" />
-        ))}
-      </div>
+  if (err) return (
+    <div className="mx-4 p-4 rounded-2xl text-xs font-mono" style={{ background:'rgba(255,68,102,0.1)', color:'var(--rose)', border:'1px solid rgba(255,68,102,0.3)' }}>
+      {err}
     </div>
   );
-}
-
-function Skeleton() {
+  if (!results.length) return (
+    <div className="text-center py-16 px-4">
+      <Search size={40} className="mx-auto mb-3" style={{ color:'var(--faint)' }} />
+      <p className="font-medium text-white mb-1">Tidak ditemukan</p>
+      <p className="text-sm" style={{ color:'var(--muted)' }}>Coba kata kunci lain</p>
+    </div>
+  );
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-      {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="skeleton rounded-xl" style={{ aspectRatio: '3/4' }} />
-      ))}
+    <div className="px-4">
+      <p className="text-xs mb-4" style={{ color:'var(--muted)' }}>
+        <span className="text-white font-semibold">{results.length}</span> hasil untuk &ldquo;{q}&rdquo;
+      </p>
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+        {results.map((d, i) => <DonghuaCard key={getItemSlug(d) || String(i)} donghua={d} />)}
+      </div>
     </div>
   );
 }
 
 export default function SearchPage({ searchParams }: Props) {
-  const q     = searchParams.q?.trim() ?? '';
-  const pages = parseInt(searchParams.pages ?? '1');
-
+  const q = searchParams.q?.trim() ?? '';
   return (
-    <div className="pt-16 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <h1 className="font-display text-3xl md:text-4xl text-white tracking-wide mb-4">CARI DONGHUA</h1>
-        <div className="mb-8"><SearchForm initialQuery={q} /></div>
-
-        {q ? (
-          <Suspense fallback={<Skeleton />}>
-            <Results q={q} pages={pages} />
-          </Suspense>
-        ) : (
-          <div className="text-center py-16">
-            <Search size={56} className="text-text-faint mx-auto mb-4" />
-            <p className="text-text-muted">Ketik judul donghua di kolom pencarian</p>
-          </div>
-        )}
+    <div style={{ paddingTop: 68, paddingBottom: 24 }}>
+      <div className="px-4 mb-5">
+        <h1 className="font-display font-bold text-2xl text-white mb-4">CARI DONGHUA</h1>
+        <SearchForm initialQuery={q} />
       </div>
+      {q ? (
+        <Suspense fallback={
+          <div className="px-4 grid grid-cols-3 gap-3">
+            {Array.from({length:9}).map((_,i)=>(
+              <div key={i} className="skeleton rounded-xl" style={{ aspectRatio:'3/4' }} />
+            ))}
+          </div>
+        }>
+          <Results q={q} />
+        </Suspense>
+      ) : (
+        <div className="text-center py-16">
+          <Search size={48} className="mx-auto mb-3" style={{ color:'var(--faint)' }} />
+          <p style={{ color:'var(--muted)' }}>Ketik judul untuk mencari</p>
+        </div>
+      )}
     </div>
   );
 }
