@@ -1,25 +1,26 @@
 export default function Loading() {
   return (
-    <div className="pt-16 min-h-screen">
-      {/* Hero skeleton */}
-      <div className="skeleton w-full h-[72vh] min-h-[500px]" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-10">
-        {[1, 2, 3].map((s) => (
-          <section key={s}>
-            <div className="skeleton h-7 w-48 rounded-lg mb-4" />
-            <div className="flex gap-3 overflow-hidden">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="skeleton rounded-xl flex-shrink-0"
-                  style={{ width: 160, height: 240 }}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+    <div style={{ paddingTop: 68 }}>
+      <div className="px-4 mb-5">
+        <div className="skeleton h-7 w-48 rounded-xl mb-2" />
+        <div className="skeleton h-4 w-32 rounded-lg" />
       </div>
+      <div className="px-4 mb-6">
+        <div className="skeleton h-10 rounded-2xl" />
+      </div>
+      {[1,2,3].map(s => (
+        <div key={s} className="mb-8">
+          <div className="flex items-center justify-between px-4 mb-3">
+            <div className="skeleton h-6 w-40 rounded-lg" />
+          </div>
+          <div className="pl-4 flex gap-3">
+            {Array.from({length:6}).map((_,i) => (
+              <div key={i} className="skeleton rounded-xl flex-shrink-0"
+                style={{ width:110, height:155 }} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
