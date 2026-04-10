@@ -1,106 +1,103 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Calendar, Clock } from 'lucide-react';
+import { CalendarDays, Clock } from 'lucide-react';
 import { getJadwal } from '@/lib/api';
 import type { ScheduleItem } from '@/lib/types';
 import { getTitle, getCoverImg } from '@/lib/utils';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 const DAYS_ID = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
 const DAYS_EN = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
 
 export default async function JadwalPage() {
-  const scheduleMap: Record<string, ScheduleItem[]> = {};
-
+  const map: Record<string, ScheduleItem[]> = {};
   try {
     const raw = await getJadwal();
-
     if (Array.isArray(raw)) {
       raw.forEach(s => {
-        const day  = String(s.day ?? s.hari ?? '').toLowerCase();
+        const day = String(s.day ?? s.hari ?? '').toLowerCase();
         const list = (s.donghua ?? s.data ?? s.list ?? []) as ScheduleItem[];
-        if (day) scheduleMap[day] = list;
+        if (day) map[day] = list;
       });
     } else {
-      // Kemungkinan object { senin: [...] }
       const obj = raw as unknown as Record<string, ScheduleItem[]>;
-      Object.keys(obj).forEach(k => {
-        if (Array.isArray(obj[k])) scheduleMap[k.toLowerCase()] = obj[k];
-      });
+      Object.keys(obj).forEach(k => { if (Array.isArray(obj[k])) map[k.toLowerCase()] = obj[k]; });
     }
-  } catch {
-    // silently fail
-  }
+  } catch {}
 
   const todayID = new Date().toLocaleDateString('id-ID', { weekday: 'long' }).toLowerCase();
 
   return (
-    <div className="pt-16 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center gap-3 mb-8">
-          <Calendar size={28} className="text-primary" />
-          <div>
-            <h1 className="font-display text-3xl md:text-4xl text-white tracking-wide">JADWAL TAYANG</h1>
-            <p className="text-text-muted text-sm">Update episode mingguan</p>
-          </div>
+    <div style={{ paddingTop: 68, paddingBottom: 24 }}>
+      <div className="px-4 mb-5">
+        <div className="flex items-center gap-2 mb-1">
+          <CalendarDays size={20} style={{ color:'var(--cyan)' }} />
+          <h1 className="font-display font-bold text-2xl text-white">JADWAL TAYANG</h1>
         </div>
-
-        {Object.keys(scheduleMap).length === 0 ? (
-          <div className="text-center py-20 text-text-muted">
-            <Calendar size={48} className="text-text-faint mx-auto mb-3" />
-            <p>Jadwal belum tersedia</p>
-          </div>
-        ) : (
-          <div className="space-y-10">
-            {DAYS_ID.map((dayID, i) => {
-              const key   = DAYS_EN[i];
-              const items = scheduleMap[key] ?? scheduleMap[dayID.toLowerCase()] ?? [];
-              const isToday = todayID.includes(dayID.toLowerCase()) || todayID.includes(key);
-
-              if (!items.length) return null;
-
-              return (
-                <section key={dayID}>
-                  <div className="flex items-center gap-3 mb-4">
-                    <h2 className={`font-display text-2xl tracking-wide ${isToday ? 'text-primary' : 'text-white'}`}>
-                      {dayID.toUpperCase()}
-                    </h2>
-                    {isToday && <span className="badge-red text-xs animate-pulse-slow">HARI INI</span>}
-                    <span className="text-text-muted text-sm">{items.length} judul</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                    {items.map((item, idx) => {
-                      const title = getTitle(item);
-                      const cover = getCoverImg(item);
-                      const slug  = item.slug ?? '';
-                      return (
-                        <Link key={idx} href={slug ? `/donghua/${slug}` : '#'}
-                          className="group bg-bg-card border border-border hover:border-primary/30 rounded-xl overflow-hidden transition-all hover:shadow-glow-sm">
-                          <div className="relative aspect-[3/4] overflow-hidden">
-                            <Image src={cover} alt={title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="180px" />
-                            <div className="absolute inset-0 gradient-bottom opacity-80" />
-                          </div>
-                          <div className="p-2">
-                            <p className="text-xs font-semibold text-text line-clamp-2 leading-snug">{title}</p>
-                            {(item.time ?? item.jam) && (
-                              <p className="flex items-center gap-1 text-xs text-text-muted mt-1">
-                                <Clock size={10} />{item.time ?? item.jam}
-                              </p>
-                            )}
-                            {item.episode && <p className="text-xs text-primary mt-0.5">Ep {item.episode}</p>}
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-        )}
+        <p className="text-xs" style={{ color:'var(--muted)' }}>Update episode mingguan</p>
       </div>
+
+      {!Object.keys(map).length ? (
+        <div className="mx-4 rounded-2xl p-10 text-center" style={{ background:'var(--ink3)', border:'1px solid var(--ink5)' }}>
+          <CalendarDays size={40} className="mx-auto mb-3" style={{ color:'var(--faint)' }} />
+          <p style={{ color:'var(--muted)' }}>Jadwal belum tersedia</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {DAYS_ID.map((dayID, i) => {
+            const key   = DAYS_EN[i];
+            const items = map[key] ?? map[dayID.toLowerCase()] ?? [];
+            const isToday = todayID.includes(dayID.toLowerCase()) || todayID.includes(key);
+            if (!items.length) return null;
+
+            return (
+              <section key={dayID}>
+                <div className="flex items-center gap-3 px-4 mb-3">
+                  <h2 className={`font-display font-bold text-lg ${isToday ? '' : 'text-white'}`}
+                    style={isToday ? { color:'var(--cyan)' } : {}}>
+                    {dayID.toUpperCase()}
+                  </h2>
+                  {isToday && (
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md animate-pulse-slow"
+                      style={{ background:'var(--rose)', color:'#fff' }}>HARI INI</span>
+                  )}
+                  <span className="text-xs" style={{ color:'var(--muted)' }}>{items.length} judul</span>
+                </div>
+
+                <div className="pl-4 scroll-x gap-3">
+                  {items.map((item, idx) => (
+                    <Link key={idx} href={item.slug ? `/donghua/${item.slug}` : '#'}
+                      className="relative flex-shrink-0 rounded-xl overflow-hidden group"
+                      style={{ width:110, height:155 }}>
+                      <Image src={getCoverImg(item)} alt={getTitle(item)} fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        sizes="110px" />
+                      <div className="absolute inset-0 grad-b" />
+                      {(item.time ?? item.jam) && (
+                        <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md"
+                          style={{ background:'rgba(0,0,0,0.75)', backdropFilter:'blur(4px)' }}>
+                          <Clock size={9} style={{ color:'var(--amber)' }} />
+                          <span className="text-[10px] font-medium" style={{ color:'var(--amber)' }}>
+                            {item.time ?? item.jam}
+                          </span>
+                        </div>
+                      )}
+                      {item.episode && (
+                        <span className="badge-ep">Ep {item.episode}</span>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 p-2">
+                        <p className="text-[11px] font-semibold text-white clamp-2">{getTitle(item)}</p>
+                      </div>
+                    </Link>
+                  ))}
+                  <div className="w-2 flex-shrink-0" />
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
