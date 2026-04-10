@@ -1,104 +1,107 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
-import { getEpisode } from '@/lib/api';
-import { getStreamUrl, buildEpSlug, epNumFromSlug } from '@/lib/utils';
+import { ChevronLeft, ChevronRight, LayoutList, ArrowLeft } from 'lucide-react';
+import { getEpisode, getDetail } from '@/lib/api';
+import { getStreamUrl, epNumFromSlug, getCoverImg, getTitle } from '@/lib/utils';
 import VideoPlayer from '@/components/VideoPlayer';
+import EpisodeList from '@/components/EpisodeList';
 import Comments from '@/components/Comments';
+import type { Episode } from '@/lib/types';
 
-interface Props {
-  params: { episodeSlug: string };
-}
+export const dynamic = 'force-dynamic';
+interface Props { params: { episodeSlug: string } }
 
 export async function generateMetadata({ params }: Props) {
-  return {
-    title: `Nonton ${params.episodeSlug.replace(/-/g, ' ')}`,
-  };
+  const ep  = epNumFromSlug(params.episodeSlug);
+  const slug = params.episodeSlug.replace(/-episode-\d+$/i, '');
+  return { title: `Episode ${ep} — ${slug.replace(/-/g,' ')}` };
 }
 
 export default async function WatchPage({ params }: Props) {
-  const slug = params.episodeSlug;
-  let episode;
+  const epSlug      = params.episodeSlug;
+  const donghuaSlug = epSlug.replace(/-episode-\d+$/i, '');
+  const epNum       = epNumFromSlug(epSlug);
 
-  try {
-    episode = await getEpisode(slug);
-  } catch {
-    notFound();
-  }
+  let episode;
+  try { episode = await getEpisode(epSlug); }
+  catch { notFound(); }
 
   const streamUrl = getStreamUrl(episode as Record<string, unknown>);
+  const prev = (episode.prev ?? episode.prev_episode) as string | null | undefined;
+  const next = (episode.next ?? episode.next_episode) as string | null | undefined;
 
-  // Derive donghua slug dari episode slug
-  // e.g. "renegade-immortal-episode-100" → "renegade-immortal"
-  const donghuaSlug = slug.replace(/-episode-\d+$/i, '');
-  const epNum = epNumFromSlug(slug);
-
-  const prevSlug = (episode.prev || episode.prev_episode) as string | null | undefined;
-  const nextSlug = (episode.next || episode.next_episode) as string | null | undefined;
+  // Fetch detail for episode list + title/cover
+  let donghua;
+  try { donghua = await getDetail(donghuaSlug); } catch {}
+  const episodes = donghua
+    ? ((donghua.episodes ?? donghua.episode_list ?? donghua.daftar_episode ?? []) as Episode[])
+    : [];
+  const cover    = donghua ? getCoverImg(donghua) : '/placeholder.jpg';
+  const dTitle   = donghua ? getTitle(donghua) : donghuaSlug.replace(/-/g, ' ');
 
   return (
-    <div className="pt-16 min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-text-muted mb-4 flex-wrap">
-          <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1">
-            <Home size={14} />
-            Beranda
-          </Link>
-          <span>/</span>
-          <Link href={`/donghua/${donghuaSlug}`} className="hover:text-primary transition-colors capitalize">
-            {donghuaSlug.replace(/-/g, ' ')}
-          </Link>
-          <span>/</span>
-          <span className="text-text">Episode {epNum}</span>
-        </nav>
-
-        {/* Title */}
-        <h1 className="font-display text-2xl md:text-3xl text-white mb-4 capitalize tracking-wide">
-          {donghuaSlug.replace(/-/g, ' ')} — Episode {epNum}
-        </h1>
-
-        {/* Video Player */}
-        <VideoPlayer src={streamUrl} title={`Episode ${epNum}`} episodeSlug={slug} />
-
-        {/* Episode Navigation */}
-        <div className="flex items-center justify-between gap-4 mt-5">
-          {prevSlug ? (
-            <Link
-              href={`/watch/${prevSlug}`}
-              className="flex items-center gap-2 px-5 py-2.5 bg-bg-card hover:bg-bg-hover border border-border rounded-full text-sm font-medium text-text transition-all"
-            >
-              <ChevronLeft size={16} />
-              Episode Sebelumnya
-            </Link>
-          ) : (
-            <div />
-          )}
-
-          <Link
-            href={`/donghua/${donghuaSlug}`}
-            className="px-5 py-2.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-full text-sm font-medium text-primary transition-all"
-          >
-            Semua Episode
-          </Link>
-
-          {nextSlug ? (
-            <Link
-              href={`/watch/${nextSlug}`}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-dark rounded-full text-sm font-semibold text-white transition-all shadow-glow-sm"
-            >
-              Episode Selanjutnya
-              <ChevronRight size={16} />
-            </Link>
-          ) : (
-            <div />
-          )}
+    <div style={{ paddingTop: 0, paddingBottom: 32 }}>
+      {/* Top bar overlay for this page */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex items-center gap-3 px-4"
+        style={{ height:56, background:'rgba(8,8,15,0.85)', backdropFilter:'blur(16px)', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+        <Link href={"/donghua/" + donghuaSlug}
+          className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background:'var(--ink3)', border:'1px solid var(--ink5)' }}>
+          <ArrowLeft size={16} className="text-white" />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-white clamp-1 capitalize">{dTitle}</p>
+          <p className="text-xs" style={{ color:'var(--cyan)' }}>Episode {epNum}</p>
         </div>
+      </div>
 
-        {/* Comments Section */}
-        <div className="mt-10">
-          <Comments episodeSlug={slug} />
+      {/* Player */}
+      <div style={{ paddingTop: 56 }}>
+        <VideoPlayer
+          src={streamUrl}
+          title={`Episode ${epNum}`}
+          episodeSlug={epSlug}
+          donghuaTitle={dTitle}
+          cover={cover}
+        />
+      </div>
+
+      {/* Episode nav */}
+      <div className="flex items-center justify-between gap-3 px-4 mt-4">
+        {prev ? (
+          <Link href={"/watch/" + prev}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+            style={{ background:'var(--ink3)', color:'var(--text)', border:'1px solid var(--ink5)' }}>
+            <ChevronLeft size={15} />Sebelumnya
+          </Link>
+        ) : <div />}
+
+        <Link href={"/donghua/" + donghuaSlug}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all"
+          style={{ background:'rgba(0,212,255,0.1)', color:'var(--cyan)', border:'1px solid rgba(0,212,255,0.25)' }}>
+          <LayoutList size={14} />Semua Ep
+        </Link>
+
+        {next ? (
+          <Link href={"/watch/" + next}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+            style={{ background:'var(--cyan)', color:'#000', boxShadow:'0 0 14px rgba(0,212,255,0.3)' }}>
+            Selanjutnya<ChevronRight size={15} />
+          </Link>
+        ) : <div />}
+      </div>
+
+      {/* Episode list (collapse) */}
+      {episodes.length > 0 && (
+        <div className="px-4 mt-6">
+          <h3 className="font-display font-bold text-base text-white glow-line mb-4">DAFTAR EPISODE</h3>
+          <EpisodeList episodes={episodes} donghuaSlug={donghuaSlug} currentSlug={epSlug} />
         </div>
+      )}
+
+      {/* Comments */}
+      <div className="px-4 mt-8">
+        <Comments episodeSlug={epSlug} />
       </div>
     </div>
   );
