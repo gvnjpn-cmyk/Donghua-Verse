@@ -1,16 +1,36 @@
-import type { Donghua, ScheduleItem } from './types';
+import type { Donghua, ScheduleItem, Episode } from './types';
 
+/** Ambil judul */
 export function getTitle(d: Donghua | ScheduleItem): string {
   return (d as Donghua).title ?? (d as Donghua).judul ?? 'Judul Tidak Diketahui';
 }
 
+/** Ambil cover — OrbitCloud pakai field "img" */
 export function getCoverImg(d: Donghua | ScheduleItem): string {
   const x = d as Donghua;
-  return x.cover ?? x.thumbnail ?? x.poster ?? x.image ?? x.gambar ?? '/placeholder.jpg';
+  return x.img ?? x.cover ?? x.thumbnail ?? x.poster ?? x.image ?? x.gambar ?? '/placeholder.jpg';
 }
 
+/** Ambil slug — bisa dari slug langsung atau dari link URL */
 export function getItemSlug(d: Donghua): string {
-  return String(d.slug ?? d.id ?? '');
+  if (d.slug) return d.slug;
+  // OrbitCloud link format: "https://api.app.orbitcloud.web.id/api/v1/detail/perfect-world"
+  if (d.link) {
+    const parts = d.link.split('/');
+    const last = parts[parts.length - 1];
+    if (last && last !== 'detail') return last;
+  }
+  return String(d.id ?? '');
+}
+
+/** Ambil episode number string — OrbitCloud pakai "ep": "Ep 263" */
+export function getEpDisplay(d: Donghua | ScheduleItem | Episode): string {
+  const x = d as Donghua;
+  if (x.ep) return x.ep; // "Ep 263"
+  if (x.latest_episode) return `Ep ${x.latest_episode}`;
+  if ((x as Donghua).episode_terakhir) return `Ep ${(x as Donghua).episode_terakhir}`;
+  if ((x as Episode).episode) return `Ep ${(x as Episode).episode}`;
+  return '';
 }
 
 export function getSynopsis(d: Donghua): string {
@@ -57,12 +77,4 @@ export function getStreamUrl(ep: Record<string, unknown>): string {
     (ep.link as string) ??
     ''
   );
-}
-
-export function formatViews(v?: number | string): string {
-  if (!v) return '';
-  const n = typeof v === 'string' ? parseInt(v) : v;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return String(n);
 }
