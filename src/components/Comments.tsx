@@ -1,326 +1,143 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, Heart, Send, Trash2, Reply, ChevronDown } from 'lucide-react';
+import { MessageCircle, Heart, Send, Trash2, CornerDownRight } from 'lucide-react';
 import type { Comment } from '@/lib/types';
 
-interface Props {
-  episodeSlug: string;
-}
+interface Props { episodeSlug: string }
 
-const STORAGE_KEY = (slug: string) => `dv_comments_${slug}`;
-const MAX_CHARS = 500;
+const KEY   = (s: string) => `dv_comments_${s}`;
+const genId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-function timeAgo(ts: number): string {
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Baru saja';
-  if (mins < 60) return `${mins} menit lalu`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} jam lalu`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days} hari lalu`;
-  return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(ts));
-}
-
-function genId() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-const AVATARS = ['🐉', '⚔️', '🌸', '🔥', '💫', '🌙', '🦊', '🏯', '🌊', '🎭'];
-const AVATAR_COLORS = ['#e63946', '#f4a261', '#457b9d', '#2a9d8f', '#8338ec', '#06d6a0'];
-
-function getAvatarBg(name: string) {
-  const idx = name.charCodeAt(0) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[idx];
-}
+const EMOJI_AVATARS = ['🐉','⚔️','🌸','🔥','💫','🌙','🦊','🏯','🌊','🎭','🗡️','🪄'];
+const AVATAR_COLORS = ['#00d4ff','#ff4466','#ffb830','#7c3aed','#059669','#dc2626'];
 
 function Avatar({ name, size = 36 }: { name: string; size?: number }) {
-  const emoji = AVATARS[name.charCodeAt(0) % AVATARS.length];
-  const bg = getAvatarBg(name);
+  const em  = EMOJI_AVATARS[name.charCodeAt(0) % EMOJI_AVATARS.length];
+  const bg  = AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
   return (
-    <div
-      className="rounded-full flex items-center justify-center flex-shrink-0 font-bold text-white text-xs"
-      style={{ width: size, height: size, background: bg, fontSize: size * 0.4 }}
-    >
-      {emoji}
+    <div className="flex-shrink-0 rounded-full flex items-center justify-center font-medium"
+      style={{ width:size, height:size, background: bg + '22', border:`1.5px solid ${bg}44`, fontSize: size * 0.42 }}>
+      {em}
     </div>
   );
 }
 
-function CommentItem({
-  comment,
-  onLike,
-  onDelete,
-  onReply,
-  userName,
-}: {
-  comment: Comment;
-  onLike: (id: string) => void;
-  onDelete: (id: string) => void;
-  onReply: (id: string, name: string) => void;
-  userName: string;
-}) {
-  const [showReplies, setShowReplies] = useState(true);
-
-  return (
-    <div className="group">
-      <div className="flex gap-3">
-        <Avatar name={comment.author} />
-        <div className="flex-1 min-w-0">
-          <div className="bg-bg-card border border-border rounded-xl rounded-tl-none px-4 py-3">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="text-sm font-semibold text-white">{comment.author}</span>
-              <span className="text-xs text-text-muted">{timeAgo(comment.timestamp)}</span>
-            </div>
-            <p className="text-sm text-text leading-relaxed whitespace-pre-wrap break-words">
-              {comment.content}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 mt-1 px-2">
-            <button
-              onClick={() => onLike(comment.id)}
-              className="flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors"
-            >
-              <Heart size={13} />
-              {comment.likes > 0 && <span>{comment.likes}</span>}
-            </button>
-            <button
-              onClick={() => onReply(comment.id, comment.author)}
-              className="flex items-center gap-1 text-xs text-text-muted hover:text-text transition-colors"
-            >
-              <Reply size={13} />
-              Balas
-            </button>
-            {comment.author === userName && (
-              <button
-                onClick={() => onDelete(comment.id)}
-                className="flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-              >
-                <Trash2 size={13} />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Replies */}
-      {comment.replies && comment.replies.length > 0 && (
-        <div className="ml-12 mt-2">
-          <button
-            onClick={() => setShowReplies((v) => !v)}
-            className="flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors mb-2"
-          >
-            <ChevronDown size={13} className={`transition-transform ${showReplies ? 'rotate-180' : ''}`} />
-            {comment.replies.length} balasan
-          </button>
-          {showReplies && (
-            <div className="space-y-3 border-l-2 border-border pl-3">
-              {comment.replies.map((r) => (
-                <div key={r.id} className="flex gap-2">
-                  <Avatar name={r.author} size={28} />
-                  <div className="flex-1">
-                    <div className="bg-bg-card border border-border rounded-xl rounded-tl-none px-3 py-2">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs font-semibold text-white">{r.author}</span>
-                        <span className="text-xs text-text-muted">{timeAgo(r.timestamp)}</span>
-                      </div>
-                      <p className="text-xs text-text">{r.content}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+function timeAgo(ts: number) {
+  const d = Date.now() - ts;
+  const m = Math.floor(d / 60000);
+  if (m < 1) return 'Baru saja';
+  if (m < 60) return `${m} mnt lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  return `${Math.floor(h / 24)} hari lalu`;
 }
 
 export default function Comments({ episodeSlug }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [userName, setUserName] = useState('');
-  const [content, setContent] = useState('');
   const [nameInput, setNameInput] = useState('');
-  const [hasName, setHasName] = useState(false);
+  const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
-  const [sortNewest, setSortNewest] = useState(true);
 
-  // Load dari localStorage
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY(episodeSlug));
-    if (stored) {
-      try { setComments(JSON.parse(stored)); } catch {}
-    }
-    const storedName = localStorage.getItem('dv_username');
-    if (storedName) {
-      setUserName(storedName);
-      setHasName(true);
-    }
+    try {
+      const c = localStorage.getItem(KEY(episodeSlug));
+      if (c) setComments(JSON.parse(c));
+      const n = localStorage.getItem('dv_username');
+      if (n) setUserName(n);
+    } catch {}
   }, [episodeSlug]);
 
-  const save = useCallback((newComments: Comment[]) => {
-    setComments(newComments);
-    localStorage.setItem(STORAGE_KEY(episodeSlug), JSON.stringify(newComments));
+  const persist = useCallback((list: Comment[]) => {
+    setComments(list);
+    localStorage.setItem(KEY(episodeSlug), JSON.stringify(list));
   }, [episodeSlug]);
 
-  const handleSetName = () => {
+  const saveName = () => {
     const n = nameInput.trim();
     if (!n) return;
     setUserName(n);
-    setHasName(true);
     localStorage.setItem('dv_username', n);
   };
 
-  const handleSubmit = () => {
-    const text = content.trim();
-    if (!text || !userName) return;
+  const send = () => {
+    const t = text.trim();
+    if (!t || !userName) return;
 
     if (replyTo) {
-      // Add reply
-      const updated = comments.map((c) => {
-        if (c.id === replyTo.id) {
-          return {
-            ...c,
-            replies: [
-              ...(c.replies || []),
-              {
-                id: genId(),
-                author: userName,
-                content: text,
-                timestamp: Date.now(),
-                likes: 0,
-                episodeSlug,
-              },
-            ],
-          };
-        }
-        return c;
-      });
-      save(updated);
+      const updated = comments.map(c =>
+        c.id === replyTo.id
+          ? { ...c, replies: [...(c.replies ?? []), { id:genId(), author:userName, content:t, timestamp:Date.now(), likes:0, episodeSlug }] }
+          : c
+      );
+      persist(updated);
       setReplyTo(null);
     } else {
-      const newComment: Comment = {
-        id: genId(),
-        author: userName,
-        content: text,
-        timestamp: Date.now(),
-        likes: 0,
-        episodeSlug,
-        replies: [],
-      };
-      save([newComment, ...comments]);
+      persist([{ id:genId(), author:userName, content:t, timestamp:Date.now(), likes:0, episodeSlug, replies:[] }, ...comments]);
     }
-    setContent('');
+    setText('');
   };
 
-  const handleLike = (id: string) => {
-    save(comments.map((c) => (c.id === id ? { ...c, likes: c.likes + 1 } : c)));
-  };
+  const like = (id: string) => persist(comments.map(c => c.id === id ? { ...c, likes: c.likes+1 } : c));
+  const del  = (id: string) => persist(comments.filter(c => c.id !== id));
 
-  const handleDelete = (id: string) => {
-    save(comments.filter((c) => c.id !== id));
-  };
-
-  const handleReply = (id: string, name: string) => {
-    setReplyTo({ id, name });
-    setContent(`@${name} `);
-  };
-
-  const sorted = sortNewest
-    ? [...comments].sort((a, b) => b.timestamp - a.timestamp)
-    : [...comments].sort((a, b) => a.timestamp - b.timestamp);
-
-  const totalComments = comments.reduce((n, c) => n + 1 + (c.replies?.length ?? 0), 0);
+  const total = comments.reduce((n, c) => n + 1 + (c.replies?.length ?? 0), 0);
 
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="section-title flex items-center gap-2">
-          <MessageSquare size={20} className="text-primary" />
-          KOMENTAR
-          {totalComments > 0 && (
-            <span className="text-base text-text-muted font-body font-normal ml-1">
-              ({totalComments})
-            </span>
-          )}
-        </h3>
-        <button
-          onClick={() => setSortNewest((v) => !v)}
-          className="text-xs text-text-muted hover:text-text border border-border hover:border-border-light px-3 py-1.5 rounded-full transition-all"
-        >
-          {sortNewest ? 'Terbaru' : 'Terlama'}
-        </button>
-      </div>
+      <h3 className="font-display font-bold text-base text-white glow-line flex items-center gap-2 mb-5">
+        <MessageCircle size={15} style={{ color:'var(--cyan)' }} />
+        KOMENTAR
+        {total > 0 && <span className="font-ui text-sm font-normal" style={{ color:'var(--muted)' }}>({total})</span>}
+      </h3>
 
       {/* Name setup */}
-      {!hasName ? (
-        <div className="bg-bg-card border border-border rounded-2xl p-5 mb-5">
-          <p className="text-sm text-text-muted mb-3">
-            Masukkan nama kamu untuk berkomentar
-          </p>
+      {!userName ? (
+        <div className="p-4 rounded-2xl mb-5" style={{ background:'var(--ink3)', border:'1px solid var(--ink5)' }}>
+          <p className="text-xs mb-3" style={{ color:'var(--muted)' }}>Masukkan nama untuk berkomentar</p>
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSetName()}
-              placeholder="Nama kamu..."
-              maxLength={30}
-              className="flex-1 bg-bg-secondary border border-border rounded-full px-4 py-2 text-sm text-text outline-none focus:border-primary transition-colors placeholder-text-faint"
-            />
-            <button
-              onClick={handleSetName}
-              className="px-5 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-full transition-colors"
-            >
-              Simpan
-            </button>
+            <input value={nameInput} onChange={e => setNameInput(e.target.value)}
+              onKeyDown={e => e.key==='Enter' && saveName()}
+              placeholder="Nama kamu..." maxLength={25}
+              className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none"
+              style={{ background:'var(--ink4)', border:'1px solid var(--ink5)', color:'var(--text)' }} />
+            <button onClick={saveName}
+              className="px-4 py-2.5 rounded-xl text-sm font-bold"
+              style={{ background:'var(--cyan)', color:'#000' }}>OK</button>
           </div>
         </div>
       ) : (
-        /* Comment input */
-        <div className="bg-bg-card border border-border rounded-2xl p-4 mb-6">
+        /* Input area */
+        <div className="p-3 rounded-2xl mb-6" style={{ background:'var(--ink3)', border:'1px solid var(--ink5)' }}>
           {replyTo && (
-            <div className="flex items-center justify-between mb-2 px-1">
-              <span className="text-xs text-text-muted">
-                Membalas <span className="text-primary font-medium">@{replyTo.name}</span>
+            <div className="flex items-center justify-between mb-2 text-xs px-1">
+              <span style={{ color:'var(--muted)' }}>
+                Balas <span style={{ color:'var(--cyan)' }}>@{replyTo.name}</span>
               </span>
-              <button
-                onClick={() => { setReplyTo(null); setContent(''); }}
-                className="text-xs text-text-muted hover:text-text"
-              >
-                ✕ Batal
-              </button>
+              <button onClick={() => { setReplyTo(null); setText(''); }}
+                className="text-xs" style={{ color:'var(--muted)' }}>✕ Batal</button>
             </div>
           )}
-          <div className="flex gap-3">
-            <Avatar name={userName} />
+          <div className="flex gap-2.5 items-start">
+            <Avatar name={userName} size={32} />
             <div className="flex-1">
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
+              <textarea value={text} onChange={e => setText(e.target.value.slice(0,400))}
                 placeholder="Tulis komentar..."
-                rows={3}
-                className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-text outline-none focus:border-primary transition-colors resize-none placeholder-text-faint"
-              />
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-text-faint">
-                  {content.length}/{MAX_CHARS}
-                </span>
+                rows={2}
+                className="w-full text-sm rounded-xl px-3 py-2.5 outline-none resize-none"
+                style={{ background:'var(--ink4)', border:'1px solid var(--faint)', color:'var(--text)' }} />
+              <div className="flex items-center justify-between mt-1.5 px-1">
+                <span className="text-xs" style={{ color:'var(--faint)' }}>{text.length}/400</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-muted">
-                    sebagai <span className="text-primary">{userName}</span>
+                  <span className="text-xs" style={{ color:'var(--muted)' }}>
+                    sebagai <span style={{ color:'var(--cyan)' }}>{userName}</span>
                   </span>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={!content.trim()}
-                    className="flex items-center gap-1.5 px-4 py-1.5 bg-primary hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-full transition-colors"
-                  >
-                    <Send size={13} />
-                    Kirim
+                  <button onClick={send} disabled={!text.trim()}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-40"
+                    style={{ background:'var(--cyan)', color:'#000' }}>
+                    <Send size={11} />Kirim
                   </button>
                 </div>
               </div>
@@ -329,23 +146,73 @@ export default function Comments({ episodeSlug }: Props) {
         </div>
       )}
 
-      {/* Comments list */}
-      {sorted.length === 0 ? (
-        <div className="text-center py-10 border border-dashed border-border rounded-2xl">
-          <MessageSquare size={32} className="text-text-faint mx-auto mb-2" />
-          <p className="text-text-muted text-sm">Belum ada komentar. Jadilah yang pertama!</p>
+      {/* List */}
+      {!comments.length ? (
+        <div className="rounded-2xl p-8 text-center" style={{ background:'var(--ink3)', border:'1px dashed var(--ink5)' }}>
+          <MessageCircle size={28} className="mx-auto mb-2" style={{ color:'var(--faint)' }} />
+          <p className="text-sm" style={{ color:'var(--muted)' }}>Jadilah yang pertama berkomentar!</p>
         </div>
       ) : (
-        <div className="space-y-5">
-          {sorted.map((c) => (
-            <CommentItem
-              key={c.id}
-              comment={c}
-              onLike={handleLike}
-              onDelete={handleDelete}
-              onReply={handleReply}
-              userName={userName}
-            />
+        <div className="space-y-4">
+          {comments.map(c => (
+            <div key={c.id}>
+              {/* Main comment */}
+              <div className="flex gap-2.5 group">
+                <Avatar name={c.author} size={34} />
+                <div className="flex-1 min-w-0">
+                  <div className="px-3.5 py-3 rounded-2xl rounded-tl-none"
+                    style={{ background:'var(--ink3)', border:'1px solid var(--ink5)' }}>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-xs font-semibold text-white">{c.author}</span>
+                      <span className="text-[10px]" style={{ color:'var(--faint)' }}>{timeAgo(c.timestamp)}</span>
+                    </div>
+                    <p className="text-sm leading-relaxed" style={{ color:'var(--text)' }}>{c.content}</p>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1.5 px-2">
+                    <button onClick={() => like(c.id)}
+                      className="flex items-center gap-1 text-xs transition-colors"
+                      style={{ color:'var(--muted)' }}>
+                      <Heart size={12} />
+                      {c.likes > 0 && c.likes}
+                    </button>
+                    <button onClick={() => { setReplyTo({ id:c.id, name:c.author }); setText(`@${c.author} `); }}
+                      className="flex items-center gap-1 text-xs transition-colors"
+                      style={{ color:'var(--muted)' }}>
+                      <CornerDownRight size={12} />Balas
+                    </button>
+                    {c.author === userName && (
+                      <button onClick={() => del(c.id)}
+                        className="text-xs opacity-0 group-hover:opacity-100 transition-all"
+                        style={{ color:'var(--rose)' }}>
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Replies */}
+              {c.replies && c.replies.length > 0 && (
+                <div className="ml-10 mt-2 space-y-2 pl-3"
+                  style={{ borderLeft:'2px solid var(--ink5)' }}>
+                  {c.replies.map(r => (
+                    <div key={r.id} className="flex gap-2">
+                      <Avatar name={r.author} size={26} />
+                      <div className="flex-1 min-w-0">
+                        <div className="px-3 py-2 rounded-xl rounded-tl-none"
+                          style={{ background:'var(--ink3)', border:'1px solid var(--ink5)' }}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold text-white">{r.author}</span>
+                            <span className="text-[10px]" style={{ color:'var(--faint)' }}>{timeAgo(r.timestamp)}</span>
+                          </div>
+                          <p className="text-xs leading-relaxed" style={{ color:'var(--text)' }}>{r.content}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
