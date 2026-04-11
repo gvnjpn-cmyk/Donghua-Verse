@@ -1,18 +1,26 @@
+// ── OrbitCloud actual response shapes ──────────────────────────
+
 export interface Donghua {
   id?: string | number;
   slug?: string;
   title?: string;
   judul?: string;
-  title_english?: string;
-  judul_english?: string;
-  synopsis?: string;
-  sinopsis?: string;
-  deskripsi?: string;
+  // cover fields — OrbitCloud uses "img"
+  img?: string;
   cover?: string;
   thumbnail?: string;
   poster?: string;
   image?: string;
   gambar?: string;
+  // episode number — OrbitCloud uses "ep" e.g. "Ep 263"
+  ep?: string;
+  latest_episode?: number | string;
+  episode_terakhir?: string | number;
+  episode?: number | string;
+  // detail fields
+  synopsis?: string;
+  sinopsis?: string;
+  deskripsi?: string;
   genres?: string[];
   genre?: string | string[];
   status?: string;
@@ -25,26 +33,26 @@ export interface Donghua {
   daftar_episode?: Episode[];
   year?: number | string;
   tahun?: number | string;
-  season?: string;
   studio?: string;
   views?: number | string;
-  updated_at?: string;
-  latest_episode?: number | string;
-  episode_terakhir?: string | number;
-  episode?: number | string;
+  // link field from OrbitCloud home
+  link?: string;
 }
 
 export interface Episode {
   id?: string | number;
   number?: number;
   episode?: number | string;
+  ep?: string;
   title?: string;
   judul?: string;
   slug?: string;
   url?: string;
+  link?: string;
   stream_url?: string;
   embed_url?: string;
   thumbnail?: string;
+  img?: string;
   date?: string;
   tanggal?: string;
 }
@@ -54,6 +62,7 @@ export interface EpisodeDetail {
   title?: string;
   judul?: string;
   episode?: number | string;
+  ep?: string;
   stream_url?: string;
   embed_url?: string;
   iframe?: string;
@@ -62,11 +71,13 @@ export interface EpisodeDetail {
   server?: string;
   servers?: VideoServer[];
   thumbnail?: string;
+  img?: string;
   prev?: string | null;
   next?: string | null;
   prev_episode?: string | null;
   next_episode?: string | null;
   donghua?: Donghua;
+  [key: string]: unknown;
 }
 
 export interface VideoServer {
@@ -75,8 +86,10 @@ export interface VideoServer {
   quality?: string;
 }
 
-// Pakai Record biar gak conflict dengan index signature di TS strict
+// OrbitCloud /home response:
+// { status: "success", data: { latest: [...], populer: [...], ... } }
 export type HomeData = Record<string, unknown> & {
+  // Direct list fields
   populer?: Donghua[];
   terbaru?: Donghua[];
   tamat?: Donghua[];
@@ -85,23 +98,8 @@ export type HomeData = Record<string, unknown> & {
   completed?: Donghua[];
   popular?: Donghua[];
   latest?: Donghua[];
-  data?: Donghua[];
+  data?: Donghua[] | HomeData;
 };
-
-export interface ScheduleItem {
-  id?: string | number;
-  slug?: string;
-  title?: string;
-  judul?: string;
-  cover?: string;
-  thumbnail?: string;
-  image?: string;
-  gambar?: string;
-  time?: string;
-  jam?: string;
-  episode?: number | string;
-  status?: string;
-}
 
 export type ScheduleDay = Record<string, unknown> & {
   day?: string;
@@ -111,8 +109,25 @@ export type ScheduleDay = Record<string, unknown> & {
   list?: ScheduleItem[];
 };
 
-// Alias lama
 export type Schedule = ScheduleDay;
+
+export interface ScheduleItem {
+  id?: string | number;
+  slug?: string;
+  title?: string;
+  judul?: string;
+  cover?: string;
+  thumbnail?: string;
+  image?: string;
+  img?: string;
+  gambar?: string;
+  time?: string;
+  jam?: string;
+  episode?: number | string;
+  ep?: string;
+  status?: string;
+  link?: string;
+}
 
 export interface Comment {
   id: string;
